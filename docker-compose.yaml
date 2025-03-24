@@ -1,0 +1,51 @@
+services:
+  mysql:
+    image: mysql:latest
+    container_name: mysql-container
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: clinicals
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+      - clinicals-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-ppassword"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  django:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: django-app
+    environment:
+      DB_HOST: mysql-container
+      DB_NAME: clinicals
+      DB_USER: root
+      DB_PASSWORD: password
+      DB_PORT: 3306
+    ports:
+      - "8000:8000"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - clinicals-network
+    command: >
+      sh -c "python /app/clinicals/manage.py makemigrations &&
+             python /app/clinicals/manage.py migrate &&
+             python /app/clinicals/manage.py runserver 0.0.0.0:8000"
+    volumes:
+      - .:/app  # Mount the local directory to /app in the container (optional, for development)
+
+networks:
+  clinicals-network:
+    driver: bridge
+
+volumes:
+  mysql-data:

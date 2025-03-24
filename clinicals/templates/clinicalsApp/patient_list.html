@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <h1>Patients</h1>
+    <table>
+        <thead>
+            <th>First name</th>
+            <th>Last name</th>
+            <th>Age</th>
+        </thead>
+        {%for patient in patient_list%}
+        <tr>
+            <td>{{patient.firstName}}</td>
+            <td>{{patient.lastName}}</td>
+            <td>{{patient.age}}</td>
+        </tr>
+        {%endfor%}
+    </table>
+    <a href="create/">Add Patient</a>
+</body>
+</html>
