@@ -21,6 +21,8 @@ docker run -d -p 8000:8000 --name django-app --network clinicals-network -e DB_H
 
 # push image to docker hub
 
+ docker login -u akhil1993
+ docker push akhil1993/django-app:latest
 
 # Install Kubernetes
 
