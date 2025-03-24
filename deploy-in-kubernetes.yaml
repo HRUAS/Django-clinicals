@@ -119,7 +119,7 @@ spec:
     spec:
       containers:
       - name: django
-        image: django-app:latest  # You'll need to build and push this image to a registry
+        image: akhil1993/django-app:latest
         envFrom:
         - configMapRef:
             name: django-config

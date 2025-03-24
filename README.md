@@ -19,6 +19,8 @@ docker build -t django-clinicals .
 
 docker run -d -p 8000:8000 --name django-app --network clinicals-network -e DB_HOST="mysql-container" django-clinicals
 
+# push image to docker hub
+
 
 # Install Kubernetes
 
