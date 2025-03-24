@@ -12,6 +12,33 @@ use clinicals;
 select * from clinicalsApp_clinicalsdata;
 select * from clinicalsApp_patient;
 
+# install docker and docker compose in amazon linux default image: Amazon Linux 2023.6.20250303
+
+sudo dnf update -y
+sudo dnf install git -y
+sudo dnf install docker -y
+sudo systemctl start docker
+sudo systemctl enable docker
+docker --version
+sudo usermod -aG docker $USER
+newgrp docker
+docker ps
+sudo curl -L "https://github.com/docker/compose/releases/download/v2.24.7/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+sudo chmod +x /usr/local/bin/docker-compose
+docker-compose --version
+
+# install minukube in this amazon linux
+curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
+sudo install minikube-linux-amd64 /usr/local/bin/minikube
+rm minikube-linux-amd64
+minikube version
+curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+chmod +x kubectl
+sudo mv kubectl /usr/local/bin/
+kubectl version --client
+minikube start --driver=docker
+minikube status
+
 
 # Building the app image
 
@@ -24,7 +51,7 @@ docker run -d -p 8000:8000 --name django-app --network clinicals-network -e DB_H
  docker login -u akhil1993
  docker push akhil1993/django-app:latest
 
-# Install Kubernetes
+# Install Kubernetes in codespace
 
 curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
 sudo install minikube-linux-amd64 /usr/local/bin/minikube

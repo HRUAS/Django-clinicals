@@ -117,6 +117,16 @@ spec:
       labels:
         app: django
     spec:
+      initContainers:
+      - name: wait-for-mysql
+        image: mysql:latest
+        command: ['sh', '-c', 'until mysqladmin ping -h mysql-service -u root -p${DB_PASSWORD} --silent; do echo waiting for mysql; sleep 2; done;']
+        env:
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: django-secret
+              key: DB_PASSWORD
       containers:
       - name: django
         image: akhil1993/django-app:latest
