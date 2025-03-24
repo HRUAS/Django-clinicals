@@ -63,3 +63,17 @@ docker --version
 minikube start --driver=docker
 minikube status
 kubectl get nodes
+
+
+# for running in amazon linux
+1) install git
+sudo dnf install git -y
+
+2) create keys
+ssh-keygen -t rsa
+
+3) add public key in github
+
+
+if connectivity not in ec2 :
+kubectl port-forward svc/django-service 8000:8000 --address=0.0.0.0
