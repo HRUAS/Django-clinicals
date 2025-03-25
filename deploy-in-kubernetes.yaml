@@ -130,6 +130,7 @@ spec:
       containers:
       - name: django
         image: akhil1993/django-app:latest
+        imagePullPolicy: Always  # Added here
         envFrom:
         - configMapRef:
             name: django-config
