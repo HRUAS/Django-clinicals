@@ -1,6 +1,6 @@
 # Django-clinicals
 
-# add database container
+# 1) Add database container
 
 docker run -d --name mysql-container -e MYSQL_ROOT_PASSWORD=password -p 3306:3306 mysql:latest
 
@@ -12,7 +12,7 @@ use clinicals;
 select * from clinicalsApp_clinicalsdata;
 select * from clinicalsApp_patient;
 
-# install docker and docker compose in amazon linux default image: Amazon Linux 2023.6.20250303
+# 2) Install docker and docker compose in amazon linux default image: Amazon Linux 2023.6.20250303
 
 sudo dnf update -y
 sudo dnf install git -y
@@ -27,7 +27,7 @@ sudo curl -L "https://github.com/docker/compose/releases/download/v2.24.7/docker
 sudo chmod +x /usr/local/bin/docker-compose
 docker-compose --version
 
-# install minukube in this amazon linux
+# 3) Install minukube in this amazon linux
 curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
 sudo install minikube-linux-amd64 /usr/local/bin/minikube
 rm minikube-linux-amd64
@@ -40,18 +40,18 @@ minikube start --driver=docker
 minikube status
 
 
-# Building the app image
+# 4) Building the app image
 
 docker build -t django-clinicals .
 
 docker run -d -p 8000:8000 --name django-app --network clinicals-network -e DB_HOST="mysql-container" django-clinicals
 
-# push image to docker hub
+# 5) Push image to docker hub
 
  docker login -u akhil1993
  docker push akhil1993/django-app:latest
 
-# Install Kubernetes in codespace
+# 6) Install Kubernetes in codespace
 
 curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
 sudo install minikube-linux-amd64 /usr/local/bin/minikube
@@ -65,7 +65,7 @@ minikube status
 kubectl get nodes
 
 
-# for running in amazon linux
+# 7) For running in amazon linux
 1) install git
 sudo dnf install git -y
 
@@ -79,7 +79,7 @@ if connectivity not in ec2 :
 kubectl port-forward svc/django-service 8000:8000 --address=0.0.0.0
 
 
-# wokring with gcloud
+# 8) Wokring with gcloud
 1) install gloud
 2) login using command gcloud login
 3) connec to GKE with the command
@@ -100,7 +100,7 @@ kubectl port-forward svc/django-service 8000:8000 --address=0.0.0.0
    gcloud compute regions list
 ```
 
-# build-and-deploy-app.sh Description
+# 9) uild-and-deploy-app.sh Description
 ```bash 
 ./build-and-deploy-app.sh v1.1.9 
 ```
