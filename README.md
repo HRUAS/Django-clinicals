@@ -83,7 +83,16 @@ kubectl port-forward svc/django-service 8000:8000 --address=0.0.0.0
 1) install gloud
 2) login using command gcloud login
 3) connec to GKE with the command
+4) Delete cluster : 
+gcloud container clusters delete $(gcloud container clusters list --format="value(name)") --region=$(gcloud container clusters list --format="value(location)")
 
+5) create cluster
+gcloud container clusters create-auto my-new-cluster --region=us-central1
+
+gcloud container clusters create my-new-cluster --region=us-central1 --num-nodes=3 --machine-type=e2-standard-2
+
+6) List regions
+gcloud compute regions list
 
 # build-and-deploy-app.sh Description
 # ./build-and-deploy-app.sh v1.1.9
