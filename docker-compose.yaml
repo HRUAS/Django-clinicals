@@ -19,9 +19,10 @@ services:
       start_period: 30s
 
   django:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    # build:
+    #   context: .
+    #   dockerfile: Dockerfile
+    image: akhil1993/django-app:v1.1.1
     container_name: django-app
     environment:
       DB_HOST: mysql-container

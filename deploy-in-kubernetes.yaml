@@ -106,7 +106,7 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: django
+  name: django-deployment  # Changed from 'django' to 'django-deployment'
 spec:
   replicas: 1
   selector:
@@ -129,8 +129,8 @@ spec:
               key: DB_PASSWORD
       containers:
       - name: django
-        image: akhil1993/django-app:latest
-        imagePullPolicy: Always  # Added here
+        image: akhil1993/django-app:v1.1.1
+        imagePullPolicy: Always
         envFrom:
         - configMapRef:
             name: django-config

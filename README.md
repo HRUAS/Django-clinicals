@@ -77,3 +77,9 @@ ssh-keygen -t rsa
 
 if connectivity not in ec2 :
 kubectl port-forward svc/django-service 8000:8000 --address=0.0.0.0
+
+
+# wokring with gcloud
+1) install gloud
+2) login using command gcloud login
+3) connec to GKE with the command
