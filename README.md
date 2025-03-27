@@ -100,7 +100,7 @@ kubectl port-forward svc/django-service 8000:8000 --address=0.0.0.0
    gcloud compute regions list
 ```
 
-# 9) uild-and-deploy-app.sh Description
+# 9) Build-and-deploy-app.sh Description
 ```bash 
 ./build-and-deploy-app.sh v1.1.9 
 ```
