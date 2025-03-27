@@ -86,6 +86,7 @@ kubectl port-forward svc/django-service 8000:8000 --address=0.0.0.0
 
 
 # build-and-deploy-app.sh Description
+# ./build-and-deploy-app.sh v1.1.9
 1) builds the image of the django code
 2) uploads the code to dockerhub
 3) deletes the older tags from dockerhub
