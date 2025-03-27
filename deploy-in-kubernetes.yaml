@@ -129,7 +129,7 @@ spec:
               key: DB_PASSWORD
       containers:
       - name: django
-        image: akhil1993/django-app:v1.1.1
+        image: akhil1993/django-app:v1.1.2
         imagePullPolicy: Always
         envFrom:
         - configMapRef:

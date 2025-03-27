@@ -83,3 +83,10 @@ kubectl port-forward svc/django-service 8000:8000 --address=0.0.0.0
 1) install gloud
 2) login using command gcloud login
 3) connec to GKE with the command
+
+
+# build-and-deploy-app.sh Description
+1) builds the image of the django code
+2) uploads the code to dockerhub
+3) deletes the older tags from dockerhub
+4) runs the kubernetes deployment
