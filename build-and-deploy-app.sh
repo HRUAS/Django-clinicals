@@ -127,6 +127,22 @@ else
     exit 1
 fi
 
+# # Apply the updated Kubernetes YAML file
+# echo -e "${COLOR}Checking if deployment exists before deletion...${NC}"
+# kubectl get -f "$K8S_YAML_FILE" -n "$NAMESPACE" > /dev/null 2>&1
+# if [ $? -eq 0 ]; then
+#     echo -e "${COLOR}Deleting existing deployment...${NC}"
+#     kubectl delete -f "$K8S_YAML_FILE" -n "$NAMESPACE"
+#     if [ $? -eq 0 ]; then
+#         echo -e "${COLOR}Successfully deleted the deployment using file $K8S_YAML_FILE${NC}"
+#     else
+#         echo -e "${COLOR}Failed to delete deployment using the file $K8S_YAML_FILE${NC}"
+#         exit 1
+#     fi
+# else
+#     echo -e "${COLOR}No existing deployment found for $K8S_YAML_FILE, skipping deletion${NC}"
+# fi
+
 # Apply the updated Kubernetes YAML file
 echo -e "${COLOR}Applying updated Kubernetes YAML file...${NC}"
 kubectl apply -f "$K8S_YAML_FILE" -n "$NAMESPACE"

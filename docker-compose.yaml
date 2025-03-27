@@ -22,7 +22,7 @@ services:
     # build:
     #   context: .
     #   dockerfile: Dockerfile
-    image: akhil1993/django-app:v1.1.2
+    image: akhil1993/django-app:v1.1.9
     container_name: django-app
     environment:
       DB_HOST: mysql-container
