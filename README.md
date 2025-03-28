@@ -90,7 +90,7 @@ kubectl port-forward svc/django-service 8000:8000 --address=0.0.0.0
 
 5) create cluster
 ```bash
-   gcloud container clusters create-auto my-new-cluster --region=us-central1
+   gcloud container clusters create-auto django-cluster-2 --region=us-central1
 
    gcloud container clusters create my-new-cluster --region=us-central1 --num-nodes=3 --machine-type=e2-standard-2
 ```
@@ -102,9 +102,24 @@ kubectl port-forward svc/django-service 8000:8000 --address=0.0.0.0
 
 # 9) Build-and-deploy-app.sh Description
 ```bash 
-./build-and-deploy-app.sh v1.1.9 
+./build-and-deploy-app.sh v1.1.10
 ```
 1) builds the image of the django code
 2) uploads the code to dockerhub
 3) deletes the older tags from dockerhub
 4) runs the kubernetes deployment
+
+# 10) Create certificate
+
+1) Create key and crt
+
+```bash
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout tls.key -out tls.crt -subj "/CN=testing-my-app.in"
+```
+2) Convert to base64
+
+```bash
+base64 tls.crt | tr -d '\n'  # For tls.crt
+echo ""
+base64 tls.key | tr -d '\n'  # For tls.key
+```
