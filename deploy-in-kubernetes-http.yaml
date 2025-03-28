@@ -1,0 +1,193 @@
+# MySQL Secret
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mysql-secret
+type: Opaque
+data:
+  MYSQL_ROOT_PASSWORD: cGFzc3dvcmQ=  # base64 encoded "password"
+---
+# Django Secret
+apiVersion: v1
+kind: Secret
+metadata:
+  name: django-secret
+type: Opaque
+data:
+  DB_PASSWORD: cGFzc3dvcmQ=  # base64 encoded "password"
+---
+# MySQL ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mysql-config
+data:
+  MYSQL_DATABASE: clinicals
+---
+# Django ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: django-config
+data:
+  DB_HOST: mysql-service
+  DB_NAME: clinicals
+  DB_USER: root
+  DB_PORT: "3306"
+---
+# MySQL Persistent Volume Claim
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mysql-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+# MySQL Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mysql
+  template:
+    metadata:
+      labels:
+        app: mysql
+    spec:
+      containers:
+      - name: mysql
+        image: mysql:latest
+        envFrom:
+        - configMapRef:
+            name: mysql-config
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysql-secret
+              key: MYSQL_ROOT_PASSWORD
+        ports:
+        - containerPort: 3306
+        volumeMounts:
+        - name: mysql-data
+          mountPath: /var/lib/mysql
+        readinessProbe:
+          exec:
+            command: ["mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
+          initialDelaySeconds: 30
+          periodSeconds: 5
+          timeoutSeconds: 5
+          failureThreshold: 10
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+      volumes:
+      - name: mysql-data
+        persistentVolumeClaim:
+          claimName: mysql-pvc
+---
+# MySQL Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-service
+spec:
+  ports:
+  - port: 3306
+    targetPort: 3306
+  selector:
+    app: mysql
+---
+# Django Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: django-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: django
+  template:
+    metadata:
+      labels:
+        app: django
+    spec:
+      initContainers:
+      - name: wait-for-mysql
+        image: mysql:latest
+        command: ['sh', '-c', 'until mysqladmin ping -h mysql-service -u root -p${DB_PASSWORD} --silent; do echo waiting for mysql; sleep 2; done;']
+        env:
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: django-secret
+              key: DB_PASSWORD
+      containers:
+      - name: django
+        image: akhil1993/django-app:v1.1.10
+        imagePullPolicy: Always
+        envFrom:
+        - configMapRef:
+            name: django-config
+        env:
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: django-secret
+              key: DB_PASSWORD
+        ports:
+        - containerPort: 8000
+        command: ["/bin/sh", "-c"]
+        args:
+        - python /app/clinicals/manage.py makemigrations &&
+          python /app/clinicals/manage.py migrate &&
+          python /app/clinicals/manage.py runserver 0.0.0.0:8000
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "512Mi"
+            cpu: "400m"
+      restartPolicy: Always
+---
+# Django Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: django-service
+spec:
+  ports:
+  - port: 8000
+    targetPort: 8000
+  selector:
+    app: django
+---
+# TLS Secret with Self-Signed Certificate
+apiVersion: v1
+kind: Secret
+metadata:
+  name: tls-secret
+type: kubernetes.io/tls
+data:
+  # Replace these with your actual base64-encoded certificate and key
+  tls.crt: <base64-encoded-certificate>  # Run: base64 tls.crt | tr -d '\n'
+  tls.key: <base64-encoded-key>         # Run: base64 tls.key | tr -d '\n'
+  # Example placeholder values (replace these):
+  # tls.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURCekNDQXE2Z0F3SUJBZ0lKQUt3eG5mR0pNMmRNQXN
+
+  # tls.key: LS0tLS1CRUdJTiBSU0EgUFJJVkFURSBLRVktLS0tLQpNSUlFcEFJQkFBS0NBUUVBMzZFeFlCRHU4UGxDU
+  
