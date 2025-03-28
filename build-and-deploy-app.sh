@@ -163,16 +163,16 @@ else
     exit 1
 fi
 
-# Watch the service until EXTERNAL-IP is assigned
-echo -e "${COLOR}Watching service $SERVICE_NAME for EXTERNAL-IP...${NC}"
-while true; do
-    EXTERNAL_IP=$(kubectl get service "$SERVICE_NAME" -n "$NAMESPACE" -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
-    if [ -z "$EXTERNAL_IP" ] || [ "$EXTERNAL_IP" = "<pending>" ]; then
-        echo -e "${COLOR}EXTERNAL-IP is still pending...${NC}"
-        sleep 5 # Check every 5 seconds
-    else
-        echo -e "${COLOR}EXTERNAL-IP assigned: $EXTERNAL_IP${NC}"
-        echo "Application URL: http://$EXTERNAL_IP:8000"
-        break
-    fi
-done
+# # Watch the service until EXTERNAL-IP is assigned
+# echo -e "${COLOR}Watching service $SERVICE_NAME for EXTERNAL-IP...${NC}"
+# while true; do
+#     EXTERNAL_IP=$(kubectl get service "$SERVICE_NAME" -n "$NAMESPACE" -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+#     if [ -z "$EXTERNAL_IP" ] || [ "$EXTERNAL_IP" = "<pending>" ]; then
+#         echo -e "${COLOR}EXTERNAL-IP is still pending...${NC}"
+#         sleep 5 # Check every 5 seconds
+#     else
+#         echo -e "${COLOR}EXTERNAL-IP assigned: $EXTERNAL_IP${NC}"
+#         echo "Application URL: http://$EXTERNAL_IP:8000"
+#         break
+#     fi
+# done
