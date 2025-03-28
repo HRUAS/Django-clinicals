@@ -1,19 +1,22 @@
+# MySQL Secret
 apiVersion: v1
 kind: Secret
 metadata:
   name: mysql-secret
 type: Opaque
 data:
-  MYSQL_ROOT_PASSWORD: cGFzc3dvcmQ=
+  MYSQL_ROOT_PASSWORD: cGFzc3dvcmQ=  # base64 encoded "password"
 ---
+# Django Secret
 apiVersion: v1
 kind: Secret
 metadata:
   name: django-secret
 type: Opaque
 data:
-  DB_PASSWORD: cGFzc3dvcmQ=
+  DB_PASSWORD: cGFzc3dvcmQ=  # base64 encoded "password"
 ---
+# MySQL ConfigMap
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -21,6 +24,7 @@ metadata:
 data:
   MYSQL_DATABASE: clinicals
 ---
+# Django ConfigMap
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -31,6 +35,7 @@ data:
   DB_USER: root
   DB_PORT: "3306"
 ---
+# MySQL Persistent Volume Claim
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -42,6 +47,7 @@ spec:
     requests:
       storage: 1Gi
 ---
+# MySQL Deployment
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -92,6 +98,7 @@ spec:
         persistentVolumeClaim:
           claimName: mysql-pvc
 ---
+# MySQL Service
 apiVersion: v1
 kind: Service
 metadata:
@@ -103,10 +110,11 @@ spec:
   selector:
     app: mysql
 ---
+# Django Deployment
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: django-deployment  # Changed from 'django' to 'django-deployment'
+  name: django-deployment
 spec:
   replicas: 1
   selector:
@@ -129,7 +137,7 @@ spec:
               key: DB_PASSWORD
       containers:
       - name: django
-        image: akhil1993/django-app:v1.1.9
+        image: akhil1993/django-app:v1.1.14
         imagePullPolicy: Always
         envFrom:
         - configMapRef:
@@ -156,14 +164,58 @@ spec:
             cpu: "400m"
       restartPolicy: Always
 ---
+# Django Service
 apiVersion: v1
 kind: Service
 metadata:
   name: django-service
 spec:
+  type: ClusterIP  # Default type, suitable for Ingress
   ports:
   - port: 8000
     targetPort: 8000
   selector:
     app: django
-  type: LoadBalancer
+---
+# ManagedCertificate for Google-Managed Certificate
+apiVersion: networking.gke.io/v1
+kind: ManagedCertificate
+metadata:
+  name: django-certificate
+spec:
+  domains:
+  - testing-my-app.in
+---
+# FrontendConfig for HTTP-to-HTTPS Redirect
+apiVersion: networking.gke.io/v1beta1
+kind: FrontendConfig
+metadata:
+  name: redirect-to-https
+spec:
+  redirectToHttps:
+    enabled: true
+    responseCodeName: "301"  # Permanent redirect
+---
+# Ingress for HTTPS with Google-Managed Certificate
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: django-ingress
+  annotations:
+    kubernetes.io/ingress.class: "gce"  # Use GKE Ingress controller
+    networking.gke.io/managed-certificates: "django-certificate"  # Link to ManagedCertificate
+    networking.gke.io/v1beta1.FrontendConfig: "redirect-to-https"  # Enable HTTP-to-HTTPS redirect
+  labels:
+    app: django
+spec:
+  rules:
+  - host: testing-my-app.in
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: django-service
+            port:
+              number: 8000
