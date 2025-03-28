@@ -1,0 +1,219 @@
+# MySQL Secret
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mysql-secret
+type: Opaque
+data:
+  MYSQL_ROOT_PASSWORD: cGFzc3dvcmQ=  # base64 encoded "password"
+---
+# Django Secret
+apiVersion: v1
+kind: Secret
+metadata:
+  name: django-secret
+type: Opaque
+data:
+  DB_PASSWORD: cGFzc3dvcmQ=  # base64 encoded "password"
+---
+# MySQL ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mysql-config
+data:
+  MYSQL_DATABASE: clinicals
+---
+# Django ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: django-config
+data:
+  DB_HOST: mysql-service
+  DB_NAME: clinicals
+  DB_USER: root
+  DB_PORT: "3306"
+---
+# MySQL Persistent Volume Claim
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mysql-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+# MySQL Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mysql
+  template:
+    metadata:
+      labels:
+        app: mysql
+    spec:
+      containers:
+      - name: mysql
+        image: mysql:latest
+        envFrom:
+        - configMapRef:
+            name: mysql-config
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysql-secret
+              key: MYSQL_ROOT_PASSWORD
+        ports:
+        - containerPort: 3306
+        volumeMounts:
+        - name: mysql-data
+          mountPath: /var/lib/mysql
+        readinessProbe:
+          exec:
+            command: ["mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
+          initialDelaySeconds: 30
+          periodSeconds: 5
+          timeoutSeconds: 5
+          failureThreshold: 10
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+      volumes:
+      - name: mysql-data
+        persistentVolumeClaim:
+          claimName: mysql-pvc
+---
+# MySQL Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-service
+spec:
+  ports:
+  - port: 3306
+    targetPort: 3306
+  selector:
+    app: mysql
+---
+# Django Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: django-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: django
+  template:
+    metadata:
+      labels:
+        app: django
+    spec:
+      initContainers:
+      - name: wait-for-mysql
+        image: mysql:latest
+        command: ['sh', '-c', 'until mysqladmin ping -h mysql-service -u root -p${DB_PASSWORD} --silent; do echo waiting for mysql; sleep 2; done;']
+        env:
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: django-secret
+              key: DB_PASSWORD
+      containers:
+      - name: django
+        image: akhil1993/django-app:v1.1.12
+        imagePullPolicy: Always
+        envFrom:
+        - configMapRef:
+            name: django-config
+        env:
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: django-secret
+              key: DB_PASSWORD
+        ports:
+        - containerPort: 8000
+        command: ["/bin/sh", "-c"]
+        args:
+        - python /app/clinicals/manage.py makemigrations &&
+          python /app/clinicals/manage.py migrate &&
+          python /app/clinicals/manage.py runserver 0.0.0.0:8000
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "512Mi"
+            cpu: "400m"
+      restartPolicy: Always
+---
+# Django Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: django-service
+spec:
+  type: ClusterIP  # Default type, suitable for Ingress
+  ports:
+  - port: 8000
+    targetPort: 8000
+  selector:
+    app: django
+---
+# TLS Secret with Self-Signed Certificate
+apiVersion: v1
+kind: Secret
+metadata:
+  name: tls-secret
+type: kubernetes.io/tls
+data:
+  # Replace these with your actual base64-encoded certificate and key
+  tls.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURHVENDQWdHZ0F3SUJBZ0lVTDhvN2o2M2JWS0hZbGZRcjlML3VvdGdXdmdJd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0hERWFNQmdHQTFVRUF3d1JkR1Z6ZEdsdVp5MXRlUzFoY0hBdWFXNHdIaGNOTWpVd016STRNREl5T1RFeQpXaGNOTWpZd016STRNREl5T1RFeVdqQWNNUm93R0FZRFZRUUREQkYwWlhOMGFXNW5MVzE1TFdGd2NDNXBiakNDCkFTSXdEUVlKS29aSWh2Y05BUUVCQlFBRGdnRVBBRENDQVFvQ2dnRUJBTFJ1Tm1kNHcwaDZ6MTdySjlYNUFHSFoKb2RyeHd4QTN0dGZTc3d5ZlZZaXAyZGNwU0lHa2lkTlAyMHFtdzRVMFhZTUZVT05VY3VEVVUwM25LV3JXZTlhNgpQYVlVS0JrSHBmTFpQUFJuZHBUUHJaM1NvZk5wR3pZK0VKUFhkQUt1YkNnV0lFWXpqbjJEQWRkRkJERytqbWV6CklvZERmMjcvUSthaTNiQ3RtMEwvN2pDWWxnS21PeDJ0NlNwK1ZQYnIrckdYZ0greVlvakdXbVU4aThWbTQwV2gKbDhKTFhGWWhtMGZFRDAwZEZPeXhzZUNNaHFvRkdvNUhnZmNtRFVhYnozbmpGbm1yNmw5N3ZHZElGODY2OXVwMwo3Qlg3SGdJZVdvcTRCNnVib1hvTHFrSHhoQWVwWmE1ZUtvUENqTUpPQTB1VTZYMWJqOFJtZDcwelJOTFU1Y2NDCkF3RUFBYU5UTUZFd0hRWURWUjBPQkJZRUZKc2NDRG1ZVk9PY2k0MVQyS0hpT25NVGw2ckRNQjhHQTFVZEl3UVkKTUJhQUZKc2NDRG1ZVk9PY2k0MVQyS0hpT25NVGw2ckRNQThHQTFVZEV3RUIvd1FGTUFNQkFmOHdEUVlKS29aSQpodmNOQVFFTEJRQURnZ0VCQUlLcVRYL0NaNi9HZUtmT0hzR0s5cUlsa2JaQUY4UVVVTUZKQnplRnBhcXpPUU9DCnlBQ1hzQ3pJVXMxQm5YdkJyTXJOWDFUMW9PNjdwNGlXOVhyTWJjZmh3cFg2c05SNnd0bk5rTXYrbk4yZENRSGcKNWxMbjJxNktGTWc4TkU2c3FvWG04aWt3Sk9KdFc0QTR1d0NESzllaEpROXA2OFRsL09jVUtsYUFNQTJqM2RmeQpQM2hTdVVhV0hReHk1VmJlQWFLNlZ5UGpHNmE1OHpBN1krL1JxOHc3NXZZNzdPYmlCUjFEUk5rdm1Oa0pWR0hEClNDb3NXNjVmaUtSQjAyNmhVTCtMUG5Ea1JjQVBqREg4ZmJJc3Z4d0VadTQ5ZEEvMTJrZFdvTURXUHZBUGRnU3QKQ1orbWxMREFxVzBkMmZxeCtZSlBndGdpUTdwT21oZ2VRV05HU2lzPQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==  # Run: base64 tls.crt | tr -d '\n'
+  tls.key: LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JSUV2QUlCQURBTkJna3Foa2lHOXcwQkFRRUZBQVNDQktZd2dnU2lBZ0VBQW9JQkFRQzBialpuZU1OSWVzOWUKNnlmVitRQmgyYUhhOGNNUU43Ylgwck1NbjFXSXFkblhLVWlCcEluVFQ5dEtwc09GTkYyREJWRGpWSExnMUZOTgo1eWxxMW52V3VqMm1GQ2daQjZYeTJUejBaM2FVejYyZDBxSHphUnMyUGhDVDEzUUNybXdvRmlCR000NTlnd0hYClJRUXh2bzVuc3lLSFEzOXUvMFBtb3Qyd3JadEMvKzR3bUpZQ3Bqc2RyZWtxZmxUMjYvcXhsNEIvc21LSXhscGwKUEl2Rlp1TkZvWmZDUzF4V0ladEh4QTlOSFJUc3NiSGdqSWFxQlJxT1I0SDNKZzFHbTg5NTR4WjVxK3BmZTd4bgpTQmZPdXZicWQrd1YreDRDSGxxS3VBZXJtNkY2QzZwQjhZUUhxV1d1WGlxRHdvekNUZ05MbE9sOVc0L0VabmU5Ck0wVFMxT1hIQWdNQkFBRUNnZ0VBREUrYzBnWG1aVEtqK3U1V295aVY3Y0h1RGtTdFhPcEFSVGViZjBLbWtSTHQKeWRyYzdLT2FiVEJTQ1NUdklFNmVEQ0RpWlFYUHYzd2RURlVpZVZJTEtjVSt0dTlCMFNZT3g2UXFTWTdVV05FQgpkVXhObFRzdHRTVEUrQ0Z5U1VzM2JBREpKa3ZCbVlURkxRMWVKNUFWK0FpNy9yaTNTdVBnbTloWnJLMXhIa0FVCncrWklkZVo3TTQvTUkreHZ2NWd4Q2pHdVQxR1RRNWpmTzdFYlljejZiZEpnUGFrSXduR3pPWGdtN0c4S2lGSVQKb3g1cVZONU9HVG5NNk15WWlxS2lhQWtSTzBoNjZVQStQdTd2QTV2Qjl2cDZWbFhac3FDK0gxTkdkRUNQaXlzMApGZTFMd3dRRjZOL3hGbE9jSkhOUVl0cHJYaDVNb0RoeXV2ZFJjM2xRK1FLQmdRRHFGZWhncm92aC85MTJFR2Z5CnkydlNGOG10MUFMR1FvaFdENUF2Yk1CendDc1NuUUwxdFFxMlIzOGp5RXhWT1k1cCs0cm1CcmNBeUZna0VtQ3QKZ0Z4Ty9xcDFEbUJpTDVTT1paTWdOaTBmVi9GWTZ6cGd4ZXlxMlN1YnN2c3htSmIvR2FHdHJ3ZjYwMnZQeWxVcwpvWDIvb3F4dUhxYk1YaS9xQjY2NGU0bWJnd0tCZ1FERlVtaUM4cm1oQ2N2UGRnajN2ZG83bGVPTWdJYkw1VjVhCmUxTHA5NllzcFg3ZitxeHQvSzVnVG5ORS9DNnRoKy9hc0pULzdEa3YvbU4vdG5jcnpEL0pKay81RmdLUTdHcVQKb2h2N0dHTEczdVBhcWIyREkwalVUMlovUmE3NGtjZDBwZ3c1ZS9jNEtFTEt1aE1IUEU0bFdLTDM4N0FmSStVZwo4eUptSVNGbGJRS0JnQ3JvZXlFRnZiUmVmMHk5OHgvcE04bGQvT1QxSU5FUXJ3Yi9jVkdRSUxMVy9jNDZvNmxBClYwZFVVYlRRYVZXUjZFMzdBdG5wVHpCQWlRK0xvdGNLMldETmc1ZFRYRTJESlRyNDJZQWxEaDVaczI2Mko0eEgKbTNzeHRiR2puREhhSTR0OU9rcW84OUNCWXBqRElOdStlbHRmU1RZaVBqYmw2T2lBSWdIRSsxTmJBb0dBWlNNcgpERXRLMS83RVp5NlJ4Q0djVk1RcjRKMFQramd6VjE4MGpWVnc2QnRmWDRBRmwwNVhObWVmYjNGdW4yVTRqRGZMCjl5emwxdktsbnhVd0dkUFRzYzhnV0lSdWhrZVhETnFmU3VFaDU5cmdvUGcxZVp6QlBJa0IrU1FIWGNLaW4raG8KQmFMRGdSWXB2ZTBIeWNLZ0wwWXlLYkxPeC9kRy9zK0FCeWJlRGpVQ2dZQnd6RWE3Y1d0SFlXU0F2R292WDI2dwo3UE9ubkxPd1pBTXpXZElwTzYzdjFDVUlmbnExLzZrMDNGUmpnOStvNVRkUHhabG1qRlltR2hiNWs5MGdkMDdrCkFXYWw1a1JUTGZBR3p0c1NBenc2MWkxUTRLOHdNeGZpWWtlbDdmSVNUa05udGE4K3cxUVp4dEhjTER1N2JtMWIKTnRaMlZvUmxQSUsvc3kzZnF4L0ZkZz09Ci0tLS0tRU5EIFBSSVZBVEUgS0VZLS0tLS0K         # Run: base64 tls.key | tr -d '\n'
+  # Example (replace these with your actual cert/key):
+  # tls.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURCekNDQXE2Z0F3SUJBZ0lKQUt3eG5mR0pNMmRNQXN
+  # tls.key: LS0tLS1CRUdJTiBSU0EgUFJJVkFURSBLRVktLS0tLQpNSUlFcEFJQkFBS0NBUUVBMzZFeFlCRHU4UGxDU
+---
+# Ingress for HTTPS
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: django-ingress
+  annotations:
+    # Optional: Use Google-managed certificate (uncomment if preferred over self-signed)
+    # kubernetes.io/ingress.class: "gce"
+    # networking.gke.io/managed-certificates: "django-certificate"
+    # Remove the above if using self-signed cert with tls-secret
+spec:
+  tls:
+  - hosts:
+    - testing-my-app.in
+    secretName: tls-secret  # References the TLS secret above
+  rules:
+  - host: testing-my-app.in
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: django-service
+            port:
+              number: 8000
