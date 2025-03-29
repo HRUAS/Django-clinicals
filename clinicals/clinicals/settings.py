@@ -27,7 +27,10 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 
-
+CSRF_TRUSTED_ORIGINS = [
+    'http://testing-my-app.in',
+    'https://testing-my-app.in',
+]
 # Application definition
 
 INSTALLED_APPS = [
