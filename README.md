@@ -90,7 +90,7 @@ kubectl port-forward svc/django-service 8000:8000 --address=0.0.0.0
 
 5) create cluster
 ```bash
-   gcloud container clusters create-auto django-cluster-2 --region=us-central1
+   gcloud container clusters create-auto django-cluster --region=us-central1
 
    gcloud container clusters create my-new-cluster --region=us-central1 --num-nodes=3 --machine-type=e2-standard-2
 ```
