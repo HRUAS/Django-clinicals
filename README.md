@@ -123,3 +123,8 @@ base64 tls.crt | tr -d '\n'  # For tls.crt
 echo ""
 base64 tls.key | tr -d '\n'  # For tls.key
 ```
+
+3) get the IP to be added in Domand
+```bash
+kubectl get ingress django-ingress -n django-prod
+```
