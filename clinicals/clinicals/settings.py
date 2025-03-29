@@ -27,10 +27,7 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 
-CSRF_TRUSTED_ORIGINS = [
-    'http://testing-my-app.in',
-    'https://testing-my-app.in',
-]
+
 # Application definition
 
 INSTALLED_APPS = [
@@ -75,6 +72,10 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "clinicals.wsgi.application"
 
+CSRF_TRUSTED_ORIGINS = [
+    'http://testing-my-app.in',
+    'https://testing-my-app.in',
+]
 
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
